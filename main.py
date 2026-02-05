@@ -59,4 +59,4 @@ if __name__ == "__main__":
     while True:
         buscar_ofertas()
 
-        time.sleep(3600)
+        time.sleep(60)
