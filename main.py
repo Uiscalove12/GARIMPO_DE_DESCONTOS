@@ -14,11 +14,17 @@ AMAZON_TAG = "garimposniper-20"
 # Inicializando as ferramentas
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 bot = TeleBot(TELEGRAM_TOKEN)
+# Linha de teste imediato
+bot.send_message(CHANNEL_ID, "🚀 **Sniper do Garimpo Online!** Monitorando ofertas...")
 
 def buscar_ofertas():
     print("🔍 Varrendo a Amazon em busca de descontos...")
     url_alvo = "https://www.amazon.com.br/gp/goldbox"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Referer": "https://www.google.com/"
+    }
     
     try:
         response = requests.get(url_alvo, headers=headers)
@@ -60,3 +66,4 @@ if __name__ == "__main__":
         buscar_ofertas()
 
         time.sleep(60)
+
