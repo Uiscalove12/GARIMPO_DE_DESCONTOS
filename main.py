@@ -18,60 +18,57 @@ bot = TeleBot(TELEGRAM_TOKEN)
 bot.send_message(CHANNEL_ID, "🚀 **Sniper do Garimpo Online!** Monitorando ofertas...")
 
 def buscar_ofertas():
-    print("🔍 Varrendo a Amazon em busca de descontos...")
-    # URL de promoções gerais (mais fácil de ler)
-    url_alvo = "https://www.amazon.com.br/b?node=16215417011" 
+    print("🔍 Varrendo a Amazon com busca profunda...")
+    # URL de ofertas mais "aberta"
+    url_alvo = "https://www.amazon.com.br/gp/goldbox"
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "Accept-Language": "pt-BR,pt;q=0.9",
-        "Referer": "https://www.google.com/",
-        "Accept-Encoding": "gzip, deflate, br"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
     }
     
     try:
-        response = requests.get(url_alvo, headers=headers, timeout=15)
+        response = requests.get(url_alvo, headers=headers, timeout=20)
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Seletores amplos para garantir que nenhum produto escape
-        itens = soup.select('div[data-component-type="s-search-result"]') or \
-                soup.find_all('div', {'data-testid': 'grid-desktop-card'}) or \
-                soup.select('.s-result-item')
+        # Estratégia de busca profunda: pega todos os links que parecem produtos
+        links_produtos = soup.find_all('a', href=True)
+        print(f"📦 DEBUG: Analisando {len(links_produtos)} links na página...")
 
-        print(f"📦 DEBUG: Encontrei {len(itens)} itens na página.")
-
-        for item in itens:
-            try:
-                link_tag = item.find('a', href=True)
-                img_tag = item.find('img')
-
-                if not link_tag or not img_tag:
-                    continue
-
-                link_limpo = link_tag['href'].split('?')[0]
-                # Filtra apenas links de produtos reais
-                if '/dp/' not in link_limpo and '/gp/' not in link_limpo:
-                    continue
-
-                titulo = img_tag.get('alt', 'Oferta Especial Amazon')
-                img_url = img_tag['src']
-
-                # Consulta sua tabela no Supabase que já está configurada
-                check = supabase.table("ofertas_postadas").select("id").eq("url_original", link_limpo).execute()
+        for link in links_produtos:
+            href = link['href']
+            # Filtra links que contenham o padrão de produto da Amazon (/dp/ ou /gp/product/)
+            if '/dp/' in href or '/gp/product/' in href:
+                link_limpo = href.split('?')[0].split('ref=')[0]
                 
-                if len(check.data) == 0:
-                    link_final = f"https://www.amazon.com.br{link_limpo}?tag={AMAZON_TAG}" if link_limpo.startswith('/') else f"{link_limpo}?tag={AMAZON_TAG}"
+                # Evita links incompletos
+                if not link_limpo.startswith('/'): continue
+
+                try:
+                    # Verifica no seu Supabase (que já está OK!)
+                    check = supabase.table("ofertas_postadas").select("id").eq("url_original", link_limpo).execute()
                     
-                    texto = f"🔥 **ACHADO DO SNIPER!**\n\n🎯 {titulo}\n\n🛒 **COMPRE AQUI:** {link_final}"
-                    
-                    bot.send_photo(CHANNEL_ID, img_url, caption=texto, parse_mode="Markdown")
-                    
-                    # Salva no banco de dados para não repetir
-                    supabase.table("ofertas_postadas").insert({"url_original": link_limpo}).execute()
-                    print(f"✅ SUCESSO: {titulo} postado no canal!")
-                    return # Posta um e encerra para o próximo ciclo
-            except Exception as e:
-                continue
+                    if len(check.data) == 0:
+                        # Tenta pegar o título do link ou da imagem dentro dele
+                        titulo = link.get_text().strip() or (link.find('img')['alt'] if link.find('img') else "Oferta Especial")
+                        img_url = link.find('img')['src'] if link.find('img') else None
+                        
+                        if len(titulo) < 10 or not img_url: continue # Pula lixo
+
+                        link_final = f"https://www.amazon.com.br{link_limpo}?tag={AMAZON_TAG}"
+                        texto = f"🔥 **ACHADO DO SNIPER!**\n\n🎯 {titulo}\n\n🛒 **COMPRE AQUI:** {link_final}"
+                        
+                        bot.send_photo(CHANNEL_ID, img_url, caption=texto, parse_mode="Markdown")
+                        
+                        # Salva no banco de dados
+                        supabase.table("ofertas_postadas").insert({"url_original": link_limpo}).execute()
+                        print(f"✅ POSTADO: {titulo[:30]}...")
+                        return # Posta um e aguarda o próximo ciclo de 60s
+                except:
+                    continue
+        
+        print("⚠️ Nenhuma oferta nova qualificada nesta varredura.")
     except Exception as e:
         print(f"❌ Erro na varredura: {e}")
 
@@ -81,6 +78,7 @@ if __name__ == "__main__":
         buscar_ofertas()
 
         time.sleep(60)
+
 
 
 
