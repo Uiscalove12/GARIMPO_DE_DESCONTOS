@@ -20,7 +20,7 @@ bot.send_message(CHANNEL_ID, "🚀 **Sniper do Garimpo Online!** Monitorando ofe
 def buscar_ofertas():
     print("🔍 Varrendo a Amazon com busca profunda...")
     # URL de ofertas mais "aberta"
-    url_alvo = "https://www.amazon.com.br/s?k=ofertas+do+dia"
+    url_alvo = "https://www.amazon.com.br/deals?ref_=nav_cs_gb"
     
     headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
@@ -79,6 +79,7 @@ if __name__ == "__main__":
         buscar_ofertas()
 
         time.sleep(60)
+
 
 
 
