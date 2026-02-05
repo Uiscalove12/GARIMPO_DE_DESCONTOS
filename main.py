@@ -6,7 +6,7 @@ from telebot import TeleBot
 
 # --- CONFIGURAÇÕES DO SISTEMA ---
 SUPABASE_URL = "https://ptdxuxnjfthemkftgeew.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0ZHh1eG5qZnRoZW1rZnRnZWV3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTk4NDE1NCwiZXhwIjoyMDg1NTYwMTU0fQ.K70krFARzKgUdB_MHaTLlJtqK-1MGgNTjPdjWTrBXr8"
+SUPABASE_KEY = "sb_secret_3ZVEWMOjuAmWX3Y47DM5DQ_ARZhQnVJ"
 TELEGRAM_TOKEN = "8431297763:AAFyZAr5AgQ2yo4F-xknpgd_lwNBgdDZiK8"
 CHANNEL_ID = "@AchadosDoSnipers"
 AMAZON_TAG = "garimposniper-20"
