@@ -14,70 +14,76 @@ AMAZON_TAG = "garimposniper-20"
 # Inicializando as ferramentas
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 bot = TeleBot(TELEGRAM_TOKEN)
-# Linha de teste imediato
-bot.send_message(CHANNEL_ID, "🚀 **Sniper do Garimpo Online!** Monitorando ofertas...")
+
+# Linha de teste imediato para confirmar conexão
+bot.send_message(CHANNEL_ID, "🚀 **Sniper do Garimpo Atualizado!** Iniciando varredura em Eletrônicos...")
 
 def buscar_ofertas():
-    print("🔍 Varrendo a Amazon com busca profunda...")
-    # URL de ofertas mais "aberta"
-    url_alvo = "https://www.amazon.com.br/deals?ref_=nav_cs_gb"
+    print("🔍 Varrendo a categoria de Eletrônicos...")
+    # URL que você escolheu (com o disfarce de busca)
+    url_alvo = "https://www.amazon.com.br/s?k=Eletr%C3%B4nicos&ref=nb_sb_noss_1"
     
     headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "pt-BR,pt;q=0.9",
-    "Cookie": "i18n-prefs=BRL; lc-acbbr=pt_BR;" # Isso diz à Amazon que você é um brasileiro real
-}
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Cookie": "i18n-prefs=BRL; lc-acbbr=pt_BR;"
+    }
     
     try:
         response = requests.get(url_alvo, headers=headers, timeout=20)
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Tenta pegar os cards de oferta específicos da página /deals
-        links_produtos = soup.find_all('a', {'class': 'a-link-normal'}, href=True)
-        print(f"📦 DEBUG: Analisando {len(links_produtos)} links de ofertas...")
+        # Pega todos os links da página para análise profunda
+        links_produtos = soup.find_all('a', href=True)
+        print(f"📦 DEBUG: Analisando {len(links_produtos)} links na página...")
 
         for link in links_produtos:
             href = link['href']
-            # Filtra links que contenham o padrão de produto da Amazon (/dp/ ou /gp/product/)
+            # Filtra links de produtos reais (/dp/ ou /gp/)
             if '/dp/' in href or '/gp/product/' in href:
+                # Limpa o link para evitar rastreadores da Amazon
                 link_limpo = href.split('?')[0].split('ref=')[0]
                 
-                # Evita links incompletos
                 if not link_limpo.startswith('/'): continue
 
                 try:
-                    # Verifica no seu Supabase (que já está OK!)
+                    # Verifica se já postamos esse link no Supabase
                     check = supabase.table("ofertas_postadas").select("id").eq("url_original", link_limpo).execute()
                     
                     if len(check.data) == 0:
-                        # Tenta pegar o título do link ou da imagem dentro dele
-                        titulo = link.get_text().strip() or (link.find('img')['alt'] if link.find('img') else "Oferta Especial")
-                        img_url = link.find('img')['src'] if link.find('img') else None
+                        # Extrai título e imagem
+                        img_tag = link.find('img') or link.parent.find('img')
+                        titulo = img_tag.get('alt', 'Oferta de Eletrônico') if img_tag else "Oferta Especial"
+                        img_url = img_tag['src'] if img_tag else None
                         
-                        if len(titulo) < 10 or not img_url: continue # Pula lixo
+                        if not img_url or len(titulo) < 10: continue
 
                         link_final = f"https://www.amazon.com.br{link_limpo}?tag={AMAZON_TAG}"
                         texto = f"🔥 **ACHADO DO SNIPER!**\n\n🎯 {titulo}\n\n🛒 **COMPRE AQUI:** {link_final}"
                         
+                        # Posta no Telegram
                         bot.send_photo(CHANNEL_ID, img_url, caption=texto, parse_mode="Markdown")
                         
-                        # Salva no banco de dados
+                        # Salva na sua tabela 'ofertas_postadas' no Supabase
                         supabase.table("ofertas_postadas").insert({"url_original": link_limpo}).execute()
-                        print(f"✅ POSTADO: {titulo[:30]}...")
-                        return # Posta um e aguarda o próximo ciclo de 60s
-                except:
+                        print(f"✅ SUCESSO: {titulo[:30]} postado!")
+                        
+                        # Posta uma e encerra para o próximo ciclo (evita spam e bloqueio)
+                        return 
+                except Exception as e:
+                    print(f"⚠️ Erro ao processar item: {e}")
                     continue
         
-        print("⚠️ Nenhuma oferta nova qualificada nesta varredura.")
+        if len(links_produtos) < 10:
+            print("⚠️ Amazon entregou página protegida. Vamos aguardar o próximo ciclo.")
+            
     except Exception as e:
         print(f"❌ Erro na varredura: {e}")
 
-# Loop infinito: roda a cada 1 hora (3600 segundos)
 if __name__ == "__main__":
     while True:
         buscar_ofertas()
-
+        # Tempo de descanso maior (10 minutos) para evitar bloqueio de IP
+        print("😴 Sniper em modo de espera por 10 minutos...")
         time.sleep(600)
-
-
