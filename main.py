@@ -20,13 +20,14 @@ bot.send_message(CHANNEL_ID, "🚀 **Sniper do Garimpo Online!** Monitorando ofe
 def buscar_ofertas():
     print("🔍 Varrendo a Amazon com busca profunda...")
     # URL de ofertas mais "aberta"
-    url_alvo = "https://www.amazon.com.br/gp/goldbox"
+    url_alvo = "https://www.amazon.com.br/s?k=ofertas+do+dia"
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-    }
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "pt-BR,pt;q=0.9",
+    "Cookie": "i18n-prefs=BRL; lc-acbbr=pt_BR;" # Isso diz à Amazon que você é um brasileiro real
+}
     
     try:
         response = requests.get(url_alvo, headers=headers, timeout=20)
@@ -78,6 +79,7 @@ if __name__ == "__main__":
         buscar_ofertas()
 
         time.sleep(60)
+
 
 
 
