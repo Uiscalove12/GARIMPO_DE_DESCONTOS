@@ -6,7 +6,6 @@ from telebot import TeleBot
 
 # --- CONFIGURAÇÕES DO SISTEMA ---
 SUPABASE_URL = "https://ptdxuxnjfthemkftgeew.supabase.co"
-# Chave anon funciona pois o RLS foi desativado conforme as imagens
 SUPABASE_KEY = "sb_publishable_j3XhyAQ_2SX2_62o9eV7Ow_hUCxOs27"
 TELEGRAM_TOKEN = "8431297763:AAFyZAr5AgQ2yo4F-xknpgd_lwNBgdDZiK8"
 CHANNEL_ID = "@AchadosDoSnipers"
@@ -16,103 +15,86 @@ AMAZON_TAG = "garimposniper-20"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 bot = TeleBot(TELEGRAM_TOKEN)
 
-# Confirmação de inicialização no canal
-try:
-    bot.send_message(CHANNEL_ID, "🚀 **Sniper do Garimpo Online!** Monitorando ofertas com preços...")
-except Exception as e:
-    print(f"Erro ao conectar ao Telegram: {e}")
-
 def buscar_ofertas():
-    print("🔍 Varrendo a Amazon em busca de eletrônicos e preços...")
-    url_alvo = "https://www.amazon.com.br/s?k=Eletr%C3%B4nicos&ref=nb_sb_noss_1"
+    print("🔍 Varrendo a página de Ofertas Mobile...")
+    # URL Mobile que você sugeriu
+    url_alvo = "https://www.amazon.com.br/gp/aw/gb/?ref_=navm_cs_gb"
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "pt-BR,pt;q=0.9",
+        "Connection": "keep-alive",
         "Cookie": "i18n-prefs=BRL; lc-acbbr=pt_BR;"
     }
     
     try:
-        response = requests.get(url_alvo, headers=headers, timeout=20)
+        response = requests.get(url_alvo, headers=headers, timeout=25)
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Localiza os blocos de produtos individuais (cards)
-        items = soup.find_all('div', {'data-component-type': 's-search-result'})
-        print(f"📦 DEBUG: Analisando {len(items)} produtos na página...")
+        # Na versão mobile, os itens costumam ficar em links com essa classe
+        items = soup.find_all('a', href=True)
+        print(f"📦 DEBUG: Analisando {len(items)} possíveis links de oferta...")
 
+        postados = 0
         for item in items:
-            link_tag = item.find('a', class_='a-link-normal s-no-outline', href=True)
-            if not link_tag: continue
-            
-            href = link_tag['href']
-            link_limpo = href.split('?')[0].split('ref=')[0]
-            if not link_limpo.startswith('/'): continue
+            href = item['href']
+            # Filtra apenas produtos reais
+            if '/dp/' in href or '/gp/product/' in href:
+                link_limpo = href.split('?')[0].split('ref=')[0]
+                if not link_limpo.startswith('/'): continue
 
-            try:
-                # Verifica duplicata no Supabase
-                check = supabase.table("ofertas_postadas").select("id").eq("url_original", link_limpo).execute()
-                
-                if len(check.data) == 0:
-                    # --- EXTRAÇÃO DE DADOS ---
-                    titulo_raw = item.find('h2')
-                    titulo = titulo_raw.get_text().strip() if titulo_raw else "Produto em Oferta"
+                try:
+                    # Verifica duplicata (RLS Desativado permite isso)
+                    check = supabase.table("ofertas_postadas").select("id").eq("url_original", link_limpo).execute()
                     
-                    img_raw = item.find('img', class_='s-image')
-                    img_url = img_raw['src'] if img_raw else None
-                    
-                    # Extração de Preço
-                    preco_inteiro = item.find('span', class_='a-price-whole')
-                    preco_centavos = item.find('span', class_='a-price-fraction')
-                    
-                    if preco_inteiro:
-                        valor = f"R$ {preco_inteiro.get_text().strip()},{preco_centavos.get_text().strip() if preco_centavos else '00'}"
-                    else:
-                        valor = "Confira o preço no site"
+                    if len(check.data) == 0:
+                        # Extração adaptada para Mobile
+                        img_tag = item.find('img')
+                        titulo = img_tag.get('alt', 'Oferta Especial') if img_tag else "Produto em Oferta"
+                        img_url = img_tag['src'] if img_tag else None
+                        
+                        # Preço em mobile costuma estar em tags de texto simples
+                        valor = "Confira no link"
+                        preco_txt = item.get_text()
+                        if "R$" in preco_txt:
+                            # Tenta extrair o valor aproximado do texto do link
+                            valor = "R$ " + preco_txt.split("R$")[1].split()[0]
 
-                    # Busca selos de desconto (ex: 20% OFF)
-                    badge = item.find('span', class_='a-badge-text')
-                    txt_badge = f"\n🏷️ **Destaque:** {badge.get_text().strip()}" if badge else ""
+                        if not img_url or len(titulo) < 10: continue
 
-                    if not img_url or len(titulo) < 10: continue
+                        link_final = f"https://www.amazon.com.br{link_limpo}?tag={AMAZON_TAG}"
+                        
+                        texto = (
+                            f"🔥 **ACHADO MOBILE DO SNIPER!**\n\n"
+                            f"🎯 {titulo[:110]}...\n\n"
+                            f"💰 **VALOR: {valor}**\n\n"
+                            f"🛒 **COMPRE AQUI:** {link_final}\n\n"
+                            f"🚚 *Frete grátis para membros Prime!*"
+                        )
+                        
+                        bot.send_photo(CHANNEL_ID, img_url, caption=texto, parse_mode="Markdown")
+                        
+                        # Salva no Supabase
+                        supabase.table("ofertas_postadas").insert({"url_original": link_limpo}).execute()
+                        print(f"✅ SUCESSO: {titulo[:30]}")
+                        
+                        postados += 1
+                        if postados >= 3: return # Posta 3 e descansa 10 min
+                        time.sleep(5) 
 
-                    link_final = f"https://www.amazon.com.br{link_limpo}?tag={AMAZON_TAG}"
-                    
-                    # --- FORMATAÇÃO DA MENSAGEM ---
-                    texto = (
-                        f"🔥 **ACHADO DO SNIPER!**\n\n"
-                        f"🎯 {titulo[:110]}...\n\n"
-                        f"💰 **APENAS: {valor}**{txt_badge}\n\n"
-                        f"🛒 **COMPRE AQUI:** {link_final}\n\n"
-                        f"🚚 *Verifique frete grátis e parcelamento no link!*"
-                    )
-                    
-                    # Envio ao Telegram
-                    bot.send_photo(CHANNEL_ID, img_url, caption=texto, parse_mode="Markdown")
-                    
-                    # Registro no Banco de Dados (agora com RLS Desativado)
-                    supabase.table("ofertas_postadas").insert({"url_original": link_limpo}).execute()
-                    print(f"✅ SUCESSO: {titulo[:30]} postado e salvo!")
-                    
-                    # Retorna após uma postagem para manter o ciclo de 10 min e evitar bloqueio
-                    return 
-
-            except Exception as e:
-                print(f"⚠️ Erro ao processar item: {e}")
-                if "429" in str(e): # Se o Telegram bloquear por velocidade
-                    print("😴 Telegram pediu pausa. Encerrando ciclo atual.")
-                    return
-                continue
+                except Exception as e:
+                    print(f"⚠️ Erro no item: {e}")
+                    continue
         
-        # Caso a Amazon bloqueie o acesso (2 links ou menos no log)
-        if len(items) == 0:
-            print("⚠️ Amazon entregou página protegida (Captcha).")
-            
+        if len(items) < 20:
+            print("⚠️ Amazon ainda bloqueando. Tentando novamente no próximo ciclo.")
+
     except Exception as e:
-        print(f"❌ Erro crítico na varredura: {e}")
+        print(f"❌ Erro crítico: {e}")
 
 if __name__ == "__main__":
     while True:
         buscar_ofertas()
-        # Tempo de 10 minutos para evitar bloqueio de IP da Amazon
-        print("😴 Sniper aguardando 10 minutos para a próxima varredura...")
+        print("😴 Sniper em descanso de 10 minutos...")
         time.sleep(600)
