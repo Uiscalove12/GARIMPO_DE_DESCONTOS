@@ -6,7 +6,7 @@ from telebot import TeleBot
 
 # --- CONFIGURAÇÕES DO SISTEMA ---
 SUPABASE_URL = "https://ptdxuxnjfthemkftgeew.supabase.co"
-SUPABASE_KEY = "sb_publishable_j3XhyAQ_2SX2_62o9eV7Ow_hUCxOs27"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0ZHh1eG5qZnRoZW1rZnRnZWV3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTk4NDE1NCwiZXhwIjoyMDg1NTYwMTU0fQ.K70krFARzKgUdB_MHaTLlJtqK-1MGgNTjPdjWTrBXr8"
 TELEGRAM_TOKEN = "8431297763:AAFyZAr5AgQ2yo4F-xknpgd_lwNBgdDZiK8"
 CHANNEL_ID = "@AchadosDoSnipers"
 AMAZON_TAG = "garimposniper-20"
@@ -33,9 +33,9 @@ def buscar_ofertas():
         response = requests.get(url_alvo, headers=headers, timeout=20)
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Estratégia de busca profunda: pega todos os links que parecem produtos
-        links_produtos = soup.find_all('a', href=True)
-        print(f"📦 DEBUG: Analisando {len(links_produtos)} links na página...")
+        # Tenta pegar os cards de oferta específicos da página /deals
+        links_produtos = soup.find_all('a', {'class': 'a-link-normal'}, href=True)
+        print(f"📦 DEBUG: Analisando {len(links_produtos)} links de ofertas...")
 
         for link in links_produtos:
             href = link['href']
@@ -79,11 +79,3 @@ if __name__ == "__main__":
         buscar_ofertas()
 
         time.sleep(60)
-
-
-
-
-
-
-
-
