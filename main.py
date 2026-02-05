@@ -18,6 +18,7 @@ bot = TeleBot(TELEGRAM_TOKEN)
 bot.send_message(CHANNEL_ID, "🚀 **Sniper do Garimpo Online!** Monitorando ofertas...")
 
 def buscar_ofertas():
+def buscar_ofertas():
     print("🔍 Varrendo a Amazon em busca de descontos...")
     # Usando a URL de promoções que é mais estável
     url_alvo = "https://www.amazon.com.br/promocoes"
@@ -73,5 +74,6 @@ if __name__ == "__main__":
         buscar_ofertas()
 
         time.sleep(60)
+
 
 
