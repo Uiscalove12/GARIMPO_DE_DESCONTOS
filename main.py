@@ -24,7 +24,8 @@ def buscar_ofertas():
         response = requests.get(url_alvo, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
         # Buscando os cards de produtos (seletor padrão da Amazon)
-        itens = soup.find_all('div', {'data-testid': 'grid-desktop-card'})
+        itens = soup.find_all('div', {'data-testid': 'grid-desktop-card'}) or \
+                soup.find_all('div', {'class': 's-result-item'})
 
         for item in itens:
             try:
@@ -57,4 +58,5 @@ def buscar_ofertas():
 if __name__ == "__main__":
     while True:
         buscar_ofertas()
+
         time.sleep(3600)
