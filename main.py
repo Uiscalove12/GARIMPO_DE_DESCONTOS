@@ -6,7 +6,7 @@ from telebot import TeleBot
 
 # --- CONFIGURAÇÕES DO SISTEMA ---
 SUPABASE_URL = "https://ptdxuxnjfthemkftgeew.supabase.co"
-SUPABASE_KEY = "sb_secret_3ZVEWMOjuAmWX3Y47DM5DQ_ARZhQnVJ"
+SUPABASE_KEY = "sb_publishable_j3XhyAQ_2SX2_62o9eV7Ow_hUCxOs27"
 TELEGRAM_TOKEN = "8431297763:AAFyZAr5AgQ2yo4F-xknpgd_lwNBgdDZiK8"
 CHANNEL_ID = "@AchadosDoSnipers"
 AMAZON_TAG = "garimposniper-20"
@@ -79,3 +79,4 @@ if __name__ == "__main__":
         buscar_ofertas()
 
         time.sleep(60)
+
